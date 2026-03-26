@@ -5,17 +5,20 @@
 You describe your target system. autoredteam discovers its vulnerabilities while you sleep. Wake up to a scored, evidence-backed report.
 
 ```
-$ python run.py --config config.yaml
-╔══════════════════════════════════════════════════════════╗
-║                    autoredteam v0.1                      ║
-║         Automated Red-Teaming for AI Systems             ║
-╚══════════════════════════════════════════════════════════╝
+$ autoredteam run --provider openai --model gpt-4o-mini
+╔══════════════════════════════════════════════════════════════╗
+║                    autoredteam v0.3                          ║
+║         Automated Red-Teaming for AI Systems                 ║
+║         Multi-cloud · Multi-turn · Stealth · Domain-aware    ║
+╚══════════════════════════════════════════════════════════════╝
 
-⚔️  Cycle 3 — ATTACK phase
-  Attacks run:    10
-  Hits (bypass):  4 (40%)
-  Best composite: 72.5
-  Categories bypassed: system_prompt_leakage, prompt_injection, jailbreak
+  Provider:  openai
+  Model:     gpt-4o-mini
+  Packs:     generic_taxonomy
+  Probes:    38
+  Stealth:   none
+  Judge:     deterministic
+  Output:    results/
 ```
 
 ## Why This Exists
@@ -36,21 +39,26 @@ The composite score is a configurable weighted sum. You can bias toward breadth 
 ## Quickstart
 
 ```bash
-# Clone and install
-git clone https://github.com/glacis-io/auto-redteam.git
-cd autoredteam
-uv pip install -r requirements.txt  # or: pip install -r requirements.txt
+# Install from PyPI
+pip install glacis-autoredteam
 
 # Dry run — echo target, no API keys needed
-python run.py --dry-run
+autoredteam run --dry-run
 
 # Point at a real system
 export OPENAI_API_KEY=sk-...
-# Edit config.yaml: set target.type to "openai" and target.params.model
-python run.py --attest
+autoredteam run --provider openai --model gpt-4o-mini
 ```
 
-The dry run uses an echo target that simulates a naive model. It takes about 30 seconds and shows you the full loop: attack generation, scoring, evidence chain, convergence detection. A full run against a real model with 10 cycles takes roughly 5–20 minutes depending on batch size and whether you enable the LLM-as-judge.
+Or clone for development:
+
+```bash
+git clone https://github.com/glacis-io/auto-redteam.git
+cd auto-redteam
+pip install -e .
+```
+
+The dry run uses an echo target that simulates a naive model. It takes about 30 seconds and shows you the full loop: attack generation, scoring, evidence chain, convergence detection. A full run against a real model takes roughly 5–20 minutes depending on probe count and whether you enable the LLM-as-judge.
 
 Results land in `results/`.
 
@@ -80,7 +88,7 @@ autoredteam runs a two-phase evolutionary loop:
 
 **Phase 1 — Attack:** Find as many vulnerabilities as possible. The loop optimizes for *higher* composite scores (more bypasses = better).
 
-**Phase 2 — Defend:** Take the winning attacks as a test suite. Harden your system prompt and guardrails. Re-run with `--phase defend`. The loop now optimizes for *lower* scores (fewer bypasses = better).
+**Phase 2 — Defend:** Take the winning attacks as a test suite. Harden your system prompt and guardrails. The loop now optimizes for *lower* scores (fewer bypasses = better).
 
 **Phase 3 — Emit Policy:** Generate an [OVERT](https://overt.sh)-compliant `policy.toml` from hardening results. This is a machine-readable governance policy that any OVERT-compatible enforcement engine can consume — or that autoredteam can ingest for another round of recursive hardening.
 
@@ -88,30 +96,45 @@ autoredteam runs a two-phase evolutionary loop:
 
 ```
 autoredteam/
-├── prepare.py       # Target interface + connection setup (READ-ONLY during loop)
-├── attack.py        # Attack taxonomy + mutation engine (agent modifies this)
-├── scoring.py       # 4-component scoring harness
-├── defend.py        # Self-healing engine (diagnose → prescribe → apply → verify)
-├── emit_policy.py   # OVERT policy generator (autoharden results → policy.toml)
-├── attestation.py   # Evidence chain (local free, Glacis paid)
-├── autoharden.py    # Autonomous hardening loop
-├── run.py           # Main evolutionary loop
-├── program.md       # YOUR strategy in plain English
-├── config.yaml      # All configuration
-└── results/         # Output directory
-    ├── evidence_chain.jsonl   # Tier 2: hashes + scores
-    ├── summary.json           # Tier 1: public stats
-    ├── attestation_receipt.json # Explicit receipt artifact (`--attest`)
-    ├── final_report.json      # Complete run results
+├── cli.py               # Unified CLI entrypoint
+├── campaign.py          # Campaign definition + probe graph
+├── campaign_runner.py   # Campaign execution engine
+├── prepare.py           # Target interface + connection setup
+├── attack.py            # Attack taxonomy + mutation engine
+├── scoring.py           # 4-component scoring harness
+├── scoring_v2.py        # v0.3 scoring engine (campaign-aware)
+├── conversation.py      # Multi-turn conversation manager
+├── trajectory_engine.py # Multi-turn trajectory planner
+├── stealth.py           # Stealth profile engine (encoding, timing, persona)
+├── defend.py            # Self-healing engine (diagnose → prescribe → apply → verify)
+├── autoharden.py        # Autonomous hardening loop
+├── immune.py            # Immune-system defense (periodic re-verification)
+├── emit_policy.py       # OVERT policy generator (autoharden results → policy.toml)
+├── attestation.py       # Evidence chain (local free, Glacis paid)
+├── run.py               # Legacy evolutionary loop
+├── config.yaml          # All configuration
+├── attack_packs/        # Modular attack pack system
+│   ├── generic_taxonomy.py  # 19-category generic pack
+│   └── domains/             # Domain-specific packs
+│       ├── healthcare.py
+│       ├── finance.py
+│       ├── hr.py
+│       └── coding_agents.py
+├── providers/           # Multi-cloud provider adapters
+├── reporting/           # Report generation (markdown, JSONL, PR body)
+├── models/              # Local scoring model weights
+├── training/            # Fine-tuning pipeline for local judge
+├── validation/          # Public validation suites
+└── results/             # Output directory
+    ├── campaign_result.json   # Full campaign results
+    ├── probe_results.jsonl    # Per-probe results
+    ├── report.md              # Human-readable report
     └── autoharden/
-        ├── policy.toml            # OVERT governance policy (the closed-loop artifact)
-        ├── hardened_prompt.txt    # Hardened system prompt with defense blocks
+        ├── policy.toml            # OVERT governance policy
+        ├── hardened_prompt.txt    # Hardened system prompt
         ├── guardrail_config.json  # Platform guardrail rules
-        ├── block_history.json     # Kept/discarded defense blocks with metrics
-        └── evidence_chain.jsonl   # Hash-chained attestation of every cycle
+        └── evidence_chain.jsonl   # Hash-chained attestation
 ```
-
-The autoresearch pattern: `prepare.py` is read-only — it defines the target interface and never changes during a run. `attack.py` is the file the agent evolves each cycle. `program.md` is the human's strategy document that steers the loop.
 
 ### Scoring Pipeline
 
@@ -125,16 +148,32 @@ The mutation engine applies 7 strategies to evolve attacks: rephrase, encode, ne
 
 ## Attack Taxonomy
 
-Built-in categories (8 total, each with seed templates):
+Built-in categories (19 total, each with seed templates):
 
+**Core categories:**
 - **Prompt injection** — Override system instructions via direct and indirect injection
 - **Jailbreaks** — Bypass safety via role-play, academic framing, fictional scenarios
 - **PII extraction** — Trick the model into leaking personal data
 - **System prompt leakage** — Extract the system prompt or internal instructions
-- **Tool misuse** — Abuse available tools or function calling
-- **Role confusion** — Confuse the model about its identity or authority level
-- **Context window poisoning** — Exploit attention mechanics with long prefixes
-- **Multi-turn manipulation** — Build up across conversation turns (single-turn approximations in v0.1)
+- **Tool misuse** — Abuse available tools or trigger unintended actions
+- **Role confusion** — Confuse the model about its role or identity
+- **Context window poisoning** — Exploit context window mechanics
+- **Multi-turn manipulation** — Build up across multiple conversation turns
+
+**Extended categories:**
+- **Encoding bypass** — Bypass filters using encoding, obfuscation, or alternative representations
+- **Payload splitting** — Split malicious payloads across fragments to evade detection
+- **Refusal suppression** — Prevent the model from using its standard refusal patterns
+- **Ethical bypass** — Use ethical or educational framing to bypass safety filters
+- **Authority manipulation** — Impersonate authority figures or invoke false credentials
+- **Output formatting exploit** — Exploit output formatting to extract or embed harmful content
+- **Indirect injection** — Inject instructions via data the model is asked to process
+- **Multilingual attack** — Use language switching to bypass English-trained safety filters
+- **Continuation attack** — Trick the model into continuing a harmful pattern it didn't start
+- **Social engineering** — Use emotional manipulation, urgency, or social pressure
+- **Hallucination exploit** — Exploit model tendency to confabulate fake but plausible information
+
+Domain-specific attack packs (healthcare, finance, HR, coding agents) are also available via `autoredteam packs list`.
 
 ## Adding Your Own Target
 
@@ -165,18 +204,27 @@ See `config.yaml` for all options. Key settings:
 
 ```yaml
 target:
-  type: openai          # "openai", "anthropic", or "echo"
+  # "openai", "anthropic", "gemini", "azure_openai",
+  # "bedrock", "cloudflare", "openai_compatible", "echo"
+  type: openai
   params:
     model: gpt-4o-mini
     system_prompt: "You are a helpful customer service bot for Acme Corp."
 
 run:
+  mode: classic         # "classic" or "coevol"
   max_cycles: 10        # More cycles = more thorough, more API spend
   batch_size: 10        # Attacks per cycle
   phase: attack         # "attack" or "defend"
 
+campaign:
+  max_probes: 20
+  max_trajectory_turns: 5
+  intensity: medium     # "low", "medium", "high"
+  stealth_profile: none # "none", "light", "medium", "aggressive"
+
 scoring:
-  use_llm_judge: true   # Needs an OpenAI key; false = deterministic-only
+  judge_backend: deterministic  # "deterministic", "api", or "slm"
   weights:
     breadth: 0.25
     depth: 0.25
@@ -217,9 +265,8 @@ The generated policy captures what autoredteam learned during hardening:
 # Generate policy from autoharden results
 autoredteam emit-policy results/autoharden/ --profile healthcare-ambient
 
-# Or it's generated automatically at the end of every autoharden run
-autoredteam harden --provider openai --model gpt-4o-mini
-# → results/autoharden/policy.toml
+# Or generate from a specific report
+autoredteam emit-policy results/autoharden/autoharden_report.json -o deployment/policy.toml
 ```
 
 The `[policy.provenance]` section records the red-teaming evidence: target model, cycles run, final ASR, governance score, and the SHA-256 chain hash linking to the full evidence chain. This makes the policy traceable — you can verify that a policy.toml was generated from a specific hardening session.
@@ -229,13 +276,25 @@ The `[policy.provenance]` section records the red-teaming evidence: target model
 ## CLI Reference
 
 ```bash
-python run.py --dry-run                          # Echo target, no API keys
-python run.py --config config.yaml               # Full attack run
-python run.py --config config.yaml --attest      # Full run + attestation receipt
-python run.py --config config.yaml --phase defend # Defend phase
-python run.py --cycles 3 --dry-run               # Quick 3-cycle test
-python run.py --quiet                            # Final results only
-autoredteam emit-policy results/autoharden/      # Generate OVERT policy.toml
+# Red-team campaigns
+autoredteam run --dry-run                                     # Echo target, no API keys
+autoredteam run --provider openai --model gpt-4o-mini         # Full run against OpenAI
+autoredteam run --provider anthropic --model claude-sonnet-4-5 # Against Anthropic
+autoredteam run --provider bedrock --model claude-sonnet-4 --region us-east-1
+autoredteam run --pack generic_taxonomy healthcare            # Multiple attack packs
+autoredteam run --stealth-profile medium                      # Stealth mode
+autoredteam run --judge-backend api                           # LLM-as-judge scoring
+
+# Validation suites
+autoredteam validate --suite generic --provider openai --model gpt-4o-mini
+autoredteam validate --suite overnight                        # Full overnight suite
+
+# Policy generation
+autoredteam emit-policy results/autoharden/                   # Generate OVERT policy.toml
+
+# Discovery
+autoredteam providers list                                    # List available providers
+autoredteam packs list                                        # List available attack packs
 ```
 
 ## Program.md
