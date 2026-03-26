@@ -107,6 +107,19 @@ def build_parser() -> argparse.ArgumentParser:
     pr_p.add_argument("--mode", default="dry_run", choices=["dry_run", "gh_cli"])
     pr_p.add_argument("--base-branch", default="main")
 
+    # --- emit-policy ---
+    ep_p = sub.add_parser("emit-policy", help="Generate OVERT policy.toml from autoharden results")
+    ep_p.add_argument("results_path", help="Path to autoharden results directory or report JSON")
+    ep_p.add_argument("-o", "--output", default=None, help="Output path (default: <results_dir>/policy.toml)")
+    ep_p.add_argument("--policy-id", default=None, help="Override policy ID")
+    ep_p.add_argument("--profile", default=None,
+                       choices=["healthcare-ambient", "healthcare-general", "finserv-trading", "enterprise-general"],
+                       help="OVERT industry profile")
+    ep_p.add_argument("--enforcement-mode", default=None,
+                       choices=["shadow", "warn", "enforce", "strict"],
+                       help="Override enforcement mode (default: derived from governance tier)")
+    ep_p.add_argument("--name", default=None, help="Override policy name")
+
     # --- providers ---
     prov_p = sub.add_parser("providers", help="List available providers")
     prov_sub = prov_p.add_subparsers(dest="providers_action")
@@ -283,6 +296,22 @@ def cmd_providers_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_emit_policy(args: argparse.Namespace) -> int:
+    """Generate OVERT policy.toml from autoharden results."""
+    from emit_policy import emit_policy_toml
+
+    output = emit_policy_toml(
+        results_path=args.results_path,
+        output_path=args.output,
+        policy_id=args.policy_id,
+        profile=args.profile,
+        enforcement_mode=args.enforcement_mode,
+        name=args.name,
+    )
+    print(f"  OVERT policy written: {output}")
+    return 0
+
+
 def cmd_packs_list(args: argparse.Namespace) -> int:
     """List all registered attack packs."""
     from attack_packs.registry import get_pack_registry
@@ -319,6 +348,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         "harden": cmd_harden,
         "report": cmd_report,
         "pr": cmd_pr,
+        "emit-policy": cmd_emit_policy,
         "providers": lambda a: cmd_providers_list(a) if getattr(a, "providers_action", None) == "list" else (print("Use: autoredteam providers list"), 0)[1],
         "packs": lambda a: cmd_packs_list(a) if getattr(a, "packs_action", None) == "list" else (print("Use: autoredteam packs list"), 0)[1],
     }

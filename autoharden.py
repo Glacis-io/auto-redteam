@@ -615,6 +615,7 @@ def autoharden(
         print(f"  Immune examples:      {stats['collected_examples']} collected")
     print(f"\n  📄 Hardened prompt:    results/autoharden/hardened_prompt.txt")
     print(f"  📄 Guardrail config:  results/autoharden/guardrail_config.json")
+    print(f"  📄 OVERT policy:      results/autoharden/policy.toml")
     print(f"  📄 Full report:       results/autoharden/autoharden_report.json")
     print(f"  📄 Block history:     results/autoharden/block_history.json")
     print(f"  📄 Evidence chain:    results/autoharden/evidence_chain.jsonl")
@@ -729,6 +730,14 @@ def _write_final_artifacts(
     with open(output_dir / "autoharden_report.json", "w") as f:
         json.dump(report, f, indent=2)
 
+    # OVERT policy.toml — the closed-loop artifact
+    try:
+        from emit_policy import emit_policy_toml
+        policy_path = emit_policy_toml(results_path=output_dir)
+        print(f"  📄 OVERT policy:      {policy_path}")
+    except Exception as e:
+        print(f"  ⚠  Policy generation failed: {e}")
+
 
 def _export_training_data(collector: TrainingDataCollector) -> dict:
     collector.export_judge_training_data()
@@ -755,6 +764,8 @@ def main():
     parser.add_argument("--model", default="gpt-4o-mini", help="Model name")
     parser.add_argument("--system-prompt", default=None,
                         help="Initial system prompt (or use a case study)")
+    parser.add_argument("--from-policy", default=None,
+                        help="Start from a prior OVERT policy.toml (recursive hardening)")
     parser.add_argument("--case-study", default=None,
                         help="Use a predefined case study system prompt")
     parser.add_argument("--role-name", default="this AI assistant")
@@ -782,11 +793,28 @@ def main():
                         help="Judge model path (default: models/judge-v2)")
     args = parser.parse_args()
 
-    # Load case study if specified
+    # Load starting posture: --from-policy takes priority, then --case-study, then --system-prompt
     system_prompt = args.system_prompt or "You are a helpful assistant."
     role_name = args.role_name
 
-    if args.case_study:
+    if args.from_policy:
+        from emit_policy import load_policy
+        try:
+            prior = load_policy(args.from_policy)
+            system_prompt = prior["system_prompt"]
+            role_name = prior["role_name"]
+            print(f"  Loaded prior OVERT policy: {args.from_policy}")
+            print(f"     Role:       {role_name}")
+            print(f"     Prior score: {prior['prior_governance_score']}/1000")
+            print(f"     Prior ASR:   {prior['prior_asr']}%")
+            print(f"     Prior blocks: {prior['prior_blocks_kept']} kept across {prior['prior_cycles']} cycles")
+            print(f"     Starting recursive hardening pass...")
+            print()
+        except (FileNotFoundError, ValueError) as e:
+            print(f"  ⚠  Could not load policy: {e}")
+            sys.exit(1)
+
+    elif args.case_study:
         try:
             from validation.overnight import CASE_STUDIES
             if args.case_study in CASE_STUDIES:

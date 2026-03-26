@@ -82,6 +82,8 @@ autoredteam runs a two-phase evolutionary loop:
 
 **Phase 2 — Defend:** Take the winning attacks as a test suite. Harden your system prompt and guardrails. Re-run with `--phase defend`. The loop now optimizes for *lower* scores (fewer bypasses = better).
 
+**Phase 3 — Emit Policy:** Generate an [OVERT](https://overt.sh)-compliant `policy.toml` from hardening results. This is a machine-readable governance policy that any OVERT-compatible enforcement engine can consume — or that autoredteam can ingest for another round of recursive hardening.
+
 ## Architecture
 
 ```
@@ -89,7 +91,10 @@ autoredteam/
 ├── prepare.py       # Target interface + connection setup (READ-ONLY during loop)
 ├── attack.py        # Attack taxonomy + mutation engine (agent modifies this)
 ├── scoring.py       # 4-component scoring harness
+├── defend.py        # Self-healing engine (diagnose → prescribe → apply → verify)
+├── emit_policy.py   # OVERT policy generator (autoharden results → policy.toml)
 ├── attestation.py   # Evidence chain (local free, Glacis paid)
+├── autoharden.py    # Autonomous hardening loop
 ├── run.py           # Main evolutionary loop
 ├── program.md       # YOUR strategy in plain English
 ├── config.yaml      # All configuration
@@ -97,7 +102,13 @@ autoredteam/
     ├── evidence_chain.jsonl   # Tier 2: hashes + scores
     ├── summary.json           # Tier 1: public stats
     ├── attestation_receipt.json # Explicit receipt artifact (`--attest`)
-    └── final_report.json      # Complete run results
+    ├── final_report.json      # Complete run results
+    └── autoharden/
+        ├── policy.toml            # OVERT governance policy (the closed-loop artifact)
+        ├── hardened_prompt.txt    # Hardened system prompt with defense blocks
+        ├── guardrail_config.json  # Platform guardrail rules
+        ├── block_history.json     # Kept/discarded defense blocks with metrics
+        └── evidence_chain.jsonl   # Hash-chained attestation of every cycle
 ```
 
 The autoresearch pattern: `prepare.py` is read-only — it defines the target interface and never changes during a run. `attack.py` is the file the agent evolves each cycle. `program.md` is the human's strategy document that steers the loop.
@@ -187,6 +198,34 @@ autoredteam maintains a tamper-evident evidence chain using SHA-256 chain hashin
 2. **Team** — full hashes, score vectors, timestamps, deterministic flags
 3. **Admin** — raw prompts and responses (local-only, gitignored by default)
 
+## OVERT Policy Output
+
+autoredteam's autoharden loop automatically generates an [OVERT](https://overt.sh)-compliant `policy.toml` at the end of each run. OVERT (Open Verification and Evaluation for Responsible Technology) is an open standard for declarative AI governance policy.
+
+The generated policy captures what autoredteam learned during hardening:
+
+| OVERT Domain | What autoredteam contributes |
+|---|---|
+| `[protect]` | Input/output filtering rules derived from discovered attack patterns (PII redaction, injection detection, encoding normalization) |
+| `[measure]` | Violation types from tested categories, recommended sampling rates |
+| `[tool]` | Tool-call deny rules from tool_misuse findings |
+| `[prompt]` | The hardened system prompt with defense blocks and provenance hashes |
+| `[attest]` | Attestation config scaled to achieved governance level |
+| `[respond]` | Failure mode (fail-closed/open) derived from governance tier |
+
+```bash
+# Generate policy from autoharden results
+autoredteam emit-policy results/autoharden/ --profile healthcare-ambient
+
+# Or it's generated automatically at the end of every autoharden run
+autoredteam harden --provider openai --model gpt-4o-mini
+# → results/autoharden/policy.toml
+```
+
+The `[policy.provenance]` section records the red-teaming evidence: target model, cycles run, final ASR, governance score, and the SHA-256 chain hash linking to the full evidence chain. This makes the policy traceable — you can verify that a policy.toml was generated from a specific hardening session.
+
+**The closed loop:** policy.toml is designed to be consumed by any OVERT-compatible enforcement engine. It can also be fed back into autoredteam for recursive hardening — each pass discovers new vulnerabilities in the hardened posture and tightens the policy further.
+
 ## CLI Reference
 
 ```bash
@@ -196,6 +235,7 @@ python run.py --config config.yaml --attest      # Full run + attestation receip
 python run.py --config config.yaml --phase defend # Defend phase
 python run.py --cycles 3 --dry-run               # Quick 3-cycle test
 python run.py --quiet                            # Final results only
+autoredteam emit-policy results/autoharden/      # Generate OVERT policy.toml
 ```
 
 ## Program.md
@@ -219,10 +259,10 @@ Red-team our customer service bot before launch.
 ## Roadmap
 
 - [x] v0.1 — Single-turn text attacks, deterministic + LLM scoring, local evidence chain
-- [ ] v0.2 — Multi-turn attack chains, agentic target support
-- [ ] v0.3 — Tool-use attacks, function calling probes
-- [ ] v0.4 — Image/multimodal attack vectors
-- [ ] v1.0 — Full Glacis attestation integration, compliance reporting
+- [x] v0.2 — Multi-turn attack chains, agentic target support
+- [x] v0.3 — Autoharden self-healing loop, OVERT policy.toml output, multi-cloud providers
+- [ ] v0.4 — Image/multimodal attack vectors, recursive policy hardening
+- [ ] v1.0 — Full OVERT standard conformance, compliance reporting
 
 ## Acknowledgments
 
