@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables — NEVER commit secrets
+.env
+.env.local
+
+# Results — output directory is tracked via .gitkeep only
+results/*
+!results/.gitkeep
+
+# Validation and research outputs
+validation/results/**
+
+# Generated training corpora
+training_data/*.jsonl
+training_data/**/*.jsonl
+training_data/*_chunk*.jsonl
+training_data/*_generated.jsonl
+
+# Raw evidence files (tier-3 sensitive, any depth)
+**/.raw_evidence.jsonl
+
+# Model weights (downloaded, not tracked in git)
+models/*/adapter_model.safetensors
+models/*/*.bin
+models/*/checkpoint-*/
+
+# Local adapter manifests and checkpoints
+models/attacker/cycle_*/
+models/defender/cycle_*/
+
+# Archives
+*.tar.gz
+
+# Logs
+*.log

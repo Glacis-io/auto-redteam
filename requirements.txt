@@ -1,0 +1,24 @@
+# glacis-autoredteam requirements
+
+# Core (always needed)
+pyyaml>=6.0,<7.0
+
+# Target providers — install what you need
+openai>=1.0,<3.0       # OpenAI, Azure OpenAI, OpenAI-compatible endpoints
+anthropic>=0.30,<1.0   # Anthropic/Claude direct API
+
+# Optional: Google Gemini direct API
+# google-generativeai>=0.8
+
+# Optional: AWS Bedrock
+# boto3>=1.34
+
+# Optional: Better terminal output
+# rich>=13.0
+
+# Optional: local SLM / training scaffold
+# torch>=2.0
+# transformers>=4.40
+# peft>=0.10
+# accelerate>=0.28
+# datasets>=2.18

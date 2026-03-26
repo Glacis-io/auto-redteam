@@ -1,0 +1,93 @@
+# autoredteam configuration
+# Copy this file and edit for your target system.
+
+# --- Target ---
+target:
+  # Options: "openai", "anthropic", "gemini", "azure_openai", "bedrock",
+  #          "cloudflare", "openai_compatible", "echo"
+  type: echo  # Change for real testing
+  params:
+    # OpenAI: model, system_prompt, temperature
+    # Anthropic: model, system_prompt, temperature
+    # Gemini: model, system_prompt, temperature
+    # Azure OpenAI: model, system_prompt, endpoint, deployment, api_version
+    # Bedrock: model, system_prompt, region
+    # Cloudflare: model, account_id
+    # OpenAI-compatible: model, endpoint
+
+# --- Provider profiles (v0.3) ---
+# providers:
+#   profiles:
+#     my_openai:
+#       provider: openai
+#       model: gpt-4o-mini
+#       system_prompt: "You are a helpful assistant."
+#     my_bedrock:
+#       provider: bedrock
+#       model: claude-sonnet-4
+#       region: us-east-1
+
+# --- Run configuration ---
+run:
+  mode: classic  # "classic" or "coevol"
+  max_cycles: 10
+  batch_size: 10
+  keep_top_k: 5
+  mutation_count: 5
+  diversity_injection_interval: 5
+  convergence_threshold: 3
+  min_composite_threshold: 10.0
+  phase: attack  # "attack" or "defend"
+  seed: 42
+  output_dir: results
+  verbose: true
+
+# --- Campaign (v0.3) ---
+campaign:
+  max_probes: 20
+  max_trajectory_turns: 5
+  intensity: medium
+  stealth_profile: none  # none | light | medium | aggressive
+
+# --- Scoring ---
+scoring:
+  judge_backend: deterministic  # "deterministic", "api", or "slm"
+  judge_model_path: models/judge-v2
+  judge_model: gpt-4.1-mini     # Can also be claude-sonnet-4 or gemini-2.5-pro
+  weights:
+    breadth: 0.25
+    depth: 0.25
+    novelty: 0.25
+    reliability: 0.25
+  use_llm_judge: false
+  deterministic_only: true
+
+# --- Stealth (v0.3) ---
+stealth:
+  profile: none
+  seed: 42
+
+# --- Attestation ---
+attestation:
+  provider: local
+  # Glacis settings (only used when provider: glacis):
+  # project: "my-project"
+  # GLACIS_API_KEY should be set as an environment variable
+
+# --- Training data ---
+training_data:
+  output_dir: training_data
+
+# --- Reporting (v0.3) ---
+reporting:
+  generate_markdown: true
+  generate_findings_jsonl: true
+  generate_pr_body: true
+
+# --- Closed-loop hardening ---
+autoharden:
+  target_score: 700
+  attack_cycles: 3
+  immune_enabled: false
+  immune_interval: 5
+  immune_threshold: 50
