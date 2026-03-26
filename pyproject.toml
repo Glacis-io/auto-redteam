@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "glacis-autoredteam"
-version = "0.1.1"
+version = "0.1.2"
 description = "Closed-loop adversarial red-teaming and hardening for AI systems"
 readme = "README.md"
 license = "Apache-2.0"
