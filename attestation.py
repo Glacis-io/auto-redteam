@@ -86,6 +86,7 @@ class LocalEvidenceStore:
         self.evidence_file = self.output_dir / "evidence_chain.jsonl"
         self.raw_file = self.output_dir / ".raw_evidence.jsonl"  # Tier 3, gitignored
         self.summary_file = self.output_dir / "summary.json"
+        self._cached_chain_hash: Optional[str] = None
         self._ensure_gitignore()
 
     def _ensure_gitignore(self):
@@ -101,8 +102,12 @@ class LocalEvidenceStore:
         # Write tier-2 record to evidence chain
         team_data = evidence.team_summary()
 
-        # Compute chain hash (links to previous record)
-        prev_hash = self._last_chain_hash()
+        # Compute chain hash (links to previous record).
+        # Use in-memory cache to avoid re-reading the file — reading the file
+        # on every call is both slow (O(n) scan) and fragile (OS write-buffer
+        # visibility can cause the previous write to be missed, breaking the
+        # chain link).
+        prev_hash = self._cached_chain_hash or self._last_chain_hash()
         record_bytes = json.dumps(team_data, sort_keys=True).encode()
         chain_hash = hashlib.sha256(
             prev_hash.encode() + record_bytes
@@ -111,6 +116,9 @@ class LocalEvidenceStore:
 
         with open(self.evidence_file, "a") as f:
             f.write(json.dumps(team_data) + "\n")
+
+        # Keep the tip in memory so the next record can link without a file read.
+        self._cached_chain_hash = chain_hash
 
         # Write tier-3 raw data (local only)
         raw_data = {
@@ -140,7 +148,14 @@ class LocalEvidenceStore:
 
     def last_chain_hash(self) -> str:
         """Public accessor for the current tip of the evidence chain."""
-        return self._last_chain_hash()
+        return self._cached_chain_hash or self._last_chain_hash()
+
+    def clear(self) -> None:
+        """Remove evidence files from prior runs so the next run starts a clean chain."""
+        for path in (self.evidence_file, self.raw_file):
+            if path.exists():
+                path.unlink()
+        self._cached_chain_hash = None
 
     def write_summary(self, summary: dict) -> None:
         """Write the public-tier summary."""

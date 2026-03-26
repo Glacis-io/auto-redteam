@@ -104,6 +104,7 @@ def run_speedrun(
             output_dir=str(results_dir),
             config={"provider": "local"},
         )
+        attestation.local.clear()
         all_categories = list(list_categories())
         if verbose:
             print(f"  ✓ Setup complete: {len(all_categories)} attack categories loaded")
@@ -316,6 +317,7 @@ def run_live_benchmark(
             output_dir=str(results_dir),
             config={"provider": "local"},
         )
+        attestation.local.clear()
         all_categories = list(list_categories())
         if verbose:
             print(f"  ✓ Connected to {target.name}")

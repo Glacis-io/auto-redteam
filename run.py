@@ -11,6 +11,7 @@ from typing import Any
 
 import yaml
 
+from attestation import AttestationManager, load_attestation_config
 from autoharden import autoharden
 
 
@@ -69,6 +70,8 @@ def main() -> int:
     parser.add_argument("--no-immune", dest="immune", action="store_false")
     parser.add_argument("--immune-interval", type=int, default=None)
     parser.add_argument("--immune-threshold", type=int, default=None)
+    parser.add_argument("--attest", action="store_true",
+                        help="Emit attestation_receipt.json after the run")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     parser.set_defaults(immune=None)
@@ -123,6 +126,16 @@ def main() -> int:
         judge_model=judge_model,
         judge_model_path=judge_model_path,
     )
+
+    if args.attest:
+        attest_cfg = load_attestation_config(args.config)
+        mgr = AttestationManager(output_dir="results/autoharden", config=attest_cfg)
+        receipt_path = mgr.write_receipt(metadata={
+            "target_type": target_type,
+            "model": model,
+            "cycles": result.get("cycles", 0),
+        })
+        print(f"  📄 Attestation receipt: {receipt_path}")
 
     print(
         json.dumps(

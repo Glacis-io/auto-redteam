@@ -210,6 +210,7 @@ def run_scenario(
         output_dir=str(results_dir),
         config={"provider": "local"},
     )
+    attestation.local.clear()
 
     all_results: list[AttackResult] = []
     prior_hashes: list[str] = []

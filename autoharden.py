@@ -302,16 +302,12 @@ def autoharden(
     output_dir = Path("results/autoharden")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Clear evidence from prior runs so this run has a clean chain
-    for stale in ("evidence_chain.jsonl", ".raw_evidence.jsonl"):
-        stale_path = output_dir / stale
-        if stale_path.exists():
-            stale_path.unlink()
-
     attestation = AttestationManager(
         output_dir=str(output_dir),
         config={"provider": "local"},
     )
+    # Clear evidence from prior runs so this run has a clean chain
+    attestation.local.clear()
     collector = TrainingDataCollector(output_dir="training_data")
 
     # --- Immune loop (continual LoRA updates) ---
