@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "autoredteam: Automated Red-Teaming for AI Systems"
+message: "If you use this software in your research, please cite it as below."
+type: software
+authors:
+  - name: Glacis
+    email: eng@glacis.io
+    website: https://glacis.io
+repository-code: https://github.com/glacis-io/auto-redteam
+url: https://glacis.io
+license: Apache-2.0
+version: 0.3.0
+keywords:
+  - ai-safety
+  - red-teaming
+  - llm-security
+  - prompt-injection
+  - adversarial-evaluation
+abstract: >-
+  Automated red-teaming tool that uses evolutionary optimization to discover
+  vulnerabilities in LLM systems across 19 attack categories. Produces scored,
+  evidence-backed reports with tamper-evident attestation chains.
