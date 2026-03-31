@@ -105,7 +105,7 @@ Loop until convergence
 
 **Phase 2 — Defend:** Use winning attacks as a test suite. Harden your system prompt and guardrails. The loop now optimizes for *lower* scores (fewer bypasses = better).
 
-**Phase 3 — Emit Policy:** Generate an [OVERT](https://overt.sh)-compliant `policy.toml` — a machine-readable governance policy any OVERT-compatible enforcement engine can consume.
+**Phase 3 — Emit Policy:** Generate an [OVERT](https://overt.is)-compliant `policy.toml` — a machine-readable governance policy any OVERT-compatible enforcement engine can consume.
 
 ### Scoring
 
@@ -194,7 +194,7 @@ Hash separation keeps sensitive attack details scoped:
 
 ## OVERT Policy Output
 
-The autoharden loop generates an [OVERT](https://overt.sh)-compliant `policy.toml` capturing what was learned during hardening:
+The autoharden loop generates an [OVERT](https://overt.is)-compliant `policy.toml` capturing what was learned during hardening:
 
 ```bash
 # Generate policy from autoharden results
